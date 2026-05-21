@@ -121,7 +121,7 @@ export function TimeLogList({ initialEntries, allClients, today }: Props) {
                           className={inputCls}
                         >
                           {ACTIVITY_TYPES.map((a) => <option key={a} value={a}>{a}</option>)}
-                          {!ACTIVITY_TYPES.includes(editForm.activity_type) && (
+                          {!ACTIVITY_TYPES.includes(editForm.activity_type as typeof ACTIVITY_TYPES[number]) && (
                             <option value={editForm.activity_type}>{editForm.activity_type}</option>
                           )}
                         </select>
