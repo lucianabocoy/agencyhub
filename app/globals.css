@@ -1,26 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-bg: #0f1117;
+  --color-surface: #1a1d27;
+  --color-surface-2: #222633;
+  --color-border: #2d3244;
+  --color-text: #e4e6ee;
+  --color-muted: #8b90a5;
+
+  --color-luciana: #f472b6;
+  --color-yesica: #818cf8;
+  --color-luz: #34d399;
+
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+  --color-info: #60a5fa;
+
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'Space Mono', monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background: #0f1117;
+  color: #e4e6ee;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0f1117; }
+::-webkit-scrollbar-thumb { background: #2d3244; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3d4460; }
+
+:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; border-radius: 4px; }
+
+/* ─── Print / PDF export ─────────────────────────────────────────────────── */
+@media print {
+  @page { size: A4 portrait; margin: 16mm 20mm; }
+
+  [data-no-print] { display: none !important; }
+
+  html, body {
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+    font-size: 12px !important;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  aside,
+  [data-timer-widget],
+  button:not([data-print-keep]) { display: none !important; }
+
+  .bg-bg, .bg-surface, .bg-surface-2 { background: #ffffff !important; }
+  .border-border { border-color: #e2e4ed !important; }
+  .text-text { color: #1a1a2e !important; }
+  .text-muted { color: #6b7280 !important; }
+  .bg-yesica\/15, .bg-yesica\/10 { background: #ede9ff !important; }
+  .text-yesica { color: #4f46e5 !important; }
+  .text-success { color: #059669 !important; }
+  .text-danger { color: #dc2626 !important; }
+  .text-warning { color: #d97706 !important; }
+
+  [data-report-section] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  [data-report-page-break] {
+    page-break-before: always;
+    break-before: page;
+  }
 }
