@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { type UserRole } from '@/types/index'
@@ -52,11 +53,15 @@ export function Sidebar({ role, userName, color, unreadCount = 0 }: SidebarProps
   return (
     <aside className="flex flex-col w-56 min-h-screen bg-surface border-r border-border">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
-        <div className="w-8 h-8 rounded-lg bg-yesica/20 border border-yesica/30 flex items-center justify-center">
-          <span className="font-mono font-bold text-yesica text-xs">AH</span>
-        </div>
-        <span className="font-bold text-text text-sm">AgencyHub</span>
+      <div className="flex items-center justify-center px-4 py-4 border-b border-border">
+        <Image
+          src="/logo.png"
+          alt="Lu Bocoy"
+          width={160}
+          height={60}
+          className="object-contain"
+          priority
+        />
       </div>
 
       {/* Nav */}

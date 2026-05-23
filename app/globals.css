@@ -2,15 +2,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0f1117;
-  --color-surface: #1a1d27;
-  --color-surface-2: #222633;
-  --color-border: #2d3244;
-  --color-text: #e4e6ee;
-  --color-muted: #8b90a5;
+  --color-bg: #050a2d;
+  --color-surface: #0b1040;
+  --color-surface-2: #111850;
+  --color-border: #1e2a70;
+  --color-text: #f0f1ff;
+  --color-muted: #d8cffe;
 
-  --color-luciana: #f472b6;
-  --color-yesica: #818cf8;
+  --color-luciana: #fea2e1;
+  --color-yesica: #f7ff5a;
   --color-luz: #34d399;
 
   --color-success: #34d399;
@@ -25,19 +25,19 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
-  background: #0f1117;
-  color: #e4e6ee;
+  background: #050a2d;
+  color: #f0f1ff;
   font-family: 'DM Sans', system-ui, sans-serif;
   min-height: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0f1117; }
-::-webkit-scrollbar-thumb { background: #2d3244; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3d4460; }
+::-webkit-scrollbar-track { background: #050a2d; }
+::-webkit-scrollbar-thumb { background: #1e2a70; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2e3e90; }
 
-:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid #f7ff5a; outline-offset: 2px; border-radius: 4px; }
 
 /* ─── Print / PDF export ─────────────────────────────────────────────────── */
 @media print {
@@ -59,8 +59,8 @@ html, body {
   .border-border { border-color: #e2e4ed !important; }
   .text-text { color: #1a1a2e !important; }
   .text-muted { color: #6b7280 !important; }
-  .bg-yesica\/15, .bg-yesica\/10 { background: #ede9ff !important; }
-  .text-yesica { color: #4f46e5 !important; }
+  .bg-yesica\/15, .bg-yesica\/10 { background: #feffc0 !important; }
+  .text-yesica { color: #8a8a00 !important; }
   .text-success { color: #059669 !important; }
   .text-danger { color: #dc2626 !important; }
   .text-warning { color: #d97706 !important; }
