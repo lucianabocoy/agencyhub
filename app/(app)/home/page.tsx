@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { type User, type DailyCheckin, type CheckinTask, type Client, type TimeEntry, type Ticket } from '@/types/index'
+import { type User, type DailyCheckin, type CheckinTask, type Client, type ClientAssignment, type TimeEntry, type Ticket } from '@/types/index'
 import { todayAR, formatMinutes } from '@/lib/utils'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
@@ -41,6 +41,20 @@ export default async function HomePage() {
   const todayEntries = (todayEntriesData ?? []) as (TimeEntry & { clients: Pick<Client, 'id' | 'name'> })[]
 
   const totalMinutesToday = todayEntries.reduce((sum, e) => sum + (e.duration_minutes ?? 0), 0)
+
+  // Clientes disponibles para el usuario
+  let assignedClients: Pick<Client, 'id' | 'name'>[] = []
+  if (profile.role === 'admin') {
+    const { data } = await supabase.from('clients').select('id, name').eq('status', 'activo').order('name')
+    assignedClients = (data ?? []) as Pick<Client, 'id' | 'name'>[]
+  } else {
+    const { data: assignments } = await supabase.from('client_assignments').select('client_id').eq('user_id', authUser.id)
+    const ids = ((assignments ?? []) as Pick<ClientAssignment, 'client_id'>[]).map((a) => a.client_id)
+    if (ids.length > 0) {
+      const { data } = await supabase.from('clients').select('id, name').in('id', ids).eq('status', 'activo').order('name')
+      assignedClients = (data ?? []) as Pick<Client, 'id' | 'name'>[]
+    }
+  }
 
   // Tickets asignados pendientes
   const { data: ticketsData } = await supabase
@@ -170,20 +184,14 @@ export default async function HomePage() {
 
       <div className="grid grid-cols-2 gap-6">
         {/* Tareas del día */}
-        {checkin ? (
-          <HomeTaskList
-            tasks={checkin.checkin_tasks}
-            checkinId={checkin.id}
-            checkoutCompleted={checkin.checkout_completed}
-          />
-        ) : (
-          <div className="bg-surface border border-border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-border">
-              <h2 className="font-semibold text-text text-sm">Tareas de hoy</h2>
-            </div>
-            <p className="px-4 py-8 text-muted text-sm text-center">Sin tareas planificadas hoy.</p>
-          </div>
-        )}
+        <HomeTaskList
+          tasks={checkin?.checkin_tasks ?? []}
+          checkinId={checkin?.id ?? null}
+          checkoutCompleted={checkin?.checkout_completed ?? false}
+          clients={assignedClients}
+          userId={authUser.id}
+          today={today}
+        />
 
         {/* Bloques de tiempo de hoy */}
         <div className="bg-surface border border-border rounded-xl overflow-hidden">
