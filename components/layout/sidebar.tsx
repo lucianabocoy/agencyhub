@@ -53,13 +53,13 @@ export function Sidebar({ role, userName, color, unreadCount = 0 }: SidebarProps
   return (
     <aside className="flex flex-col w-56 min-h-screen bg-surface border-r border-border">
       {/* Logo */}
-      <div className="flex items-center justify-center px-4 py-5 border-b border-border">
+      <div className="flex items-center justify-center px-4 py-4 border-b border-border">
         <Image
           src="/logo.png"
-          alt="Lu Bocoy"
+          alt="Luciana Bocoy"
           width={160}
-          height={160}
-          className="object-contain w-36 h-36"
+          height={80}
+          className="object-contain"
           priority
         />
       </div>
