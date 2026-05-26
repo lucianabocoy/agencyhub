@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { type User, type DailyCheckin, type CheckinTask, type Client, type ClientAssignment, type TimeEntry, type Ticket } from '@/types/index'
 import { todayAR, formatMinutes } from '@/lib/utils'
 import Link from 'next/link'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Calendar } from 'lucide-react'
 import { HomeTaskList } from '@/components/home/home-task-list'
 import { PendingTasksList, type PendingTask } from '@/components/home/pending-tasks-list'
 
@@ -55,6 +55,23 @@ export default async function HomePage() {
       assignedClients = (data ?? []) as Pick<Client, 'id' | 'name'>[]
     }
   }
+
+  // Tareas kanban que vencen hoy o mañana, asignadas al usuario, no completadas
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+
+  const { data: kanbanDueData } = await supabase
+    .from('kanban_tasks')
+    .select('id, title, due_date, section, client_id, clients(name), kanban_task_assignees!inner(user_id)')
+    .in('due_date', [today, tomorrowStr])
+    .is('completed_at', null)
+    .neq('section', 'completadas')
+    .eq('kanban_task_assignees.user_id', authUser.id)
+    .order('due_date', { ascending: true })
+
+  type KanbanDueTask = { id: string; title: string; due_date: string; section: string; client_id: string; clients: { name: string } | null }
+  const kanbanDueTasks = (kanbanDueData ?? []) as unknown as KanbanDueTask[]
 
   // Tickets asignados pendientes
   const { data: ticketsData } = await supabase
@@ -180,6 +197,37 @@ export default async function HomePage() {
       {/* Pendientes del equipo — solo admin */}
       {profile.role === 'admin' && teamPending.length > 0 && (
         <PendingTasksList tasks={teamPending} showUser />
+      )}
+
+      {/* Alertas kanban: vencen hoy o mañana */}
+      {kanbanDueTasks.length > 0 && (
+        <div className="bg-surface border border-warning/30 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-warning/20 flex items-center gap-2">
+            <Calendar size={15} className="text-warning" />
+            <h2 className="font-semibold text-warning text-sm">Tareas kanban próximas a vencer</h2>
+          </div>
+          <div className="divide-y divide-border">
+            {kanbanDueTasks.map((task) => {
+              const isToday = task.due_date === today
+              return (
+                <Link key={task.id} href="/kanban" className="px-4 py-3 flex items-center gap-3 hover:bg-surface-2 transition-colors">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isToday ? 'bg-danger' : 'bg-warning'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text font-medium truncate">{task.title}</p>
+                    <p className="text-xs text-muted">{task.clients?.name}</p>
+                  </div>
+                  <span className={`text-xs font-medium whitespace-nowrap px-2 py-0.5 rounded-full ${
+                    isToday
+                      ? 'text-danger bg-danger/10 border border-danger/20'
+                      : 'text-warning bg-warning/10 border border-warning/20'
+                  }`}>
+                    {isToday ? 'Vence hoy' : 'Vence mañana'}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-6">
