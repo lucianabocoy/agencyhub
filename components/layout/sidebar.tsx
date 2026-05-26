@@ -55,7 +55,7 @@ export function Sidebar({ role, userName, color, unreadCount = 0 }: SidebarProps
       {/* Logo */}
       <div className="flex items-center justify-center px-4 py-4 border-b border-border">
         <Image
-          src="/logo.png"
+          src="/logo-lb.png"
           alt="Luciana Bocoy"
           width={160}
           height={80}
