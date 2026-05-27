@@ -55,10 +55,16 @@ export function TimeLogList({ initialEntries, allClients, today }: Props) {
     setSaving(true)
 
     const dateStr = entry.date
-    // Usar new Date() para convertir hora local → UTC antes de guardar en Supabase
-    const startISO = new Date(`${dateStr}T${editForm.start_time}:00`).toISOString()
+    // Construir ISO con offset explícito del browser para evitar ambigüedad de timezone
+    const tzOffset = new Date().getTimezoneOffset()
+    const sign = tzOffset <= 0 ? '+' : '-'
+    const hh = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0')
+    const mm = String(Math.abs(tzOffset) % 60).padStart(2, '0')
+    const tz = `${sign}${hh}:${mm}`
+
+    const startISO = new Date(`${dateStr}T${editForm.start_time}:00${tz}`).toISOString()
     const endISO = editForm.end_time
-      ? new Date(`${dateStr}T${editForm.end_time}:00`).toISOString()
+      ? new Date(`${dateStr}T${editForm.end_time}:00${tz}`).toISOString()
       : null
 
     let durationMinutes = entry.duration_minutes
