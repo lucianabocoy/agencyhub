@@ -55,8 +55,11 @@ export function TimeLogList({ initialEntries, allClients, today }: Props) {
     setSaving(true)
 
     const dateStr = entry.date
-    const startISO = `${dateStr}T${editForm.start_time}:00`
-    const endISO = editForm.end_time ? `${dateStr}T${editForm.end_time}:00` : null
+    // Usar new Date() para convertir hora local → UTC antes de guardar en Supabase
+    const startISO = new Date(`${dateStr}T${editForm.start_time}:00`).toISOString()
+    const endISO = editForm.end_time
+      ? new Date(`${dateStr}T${editForm.end_time}:00`).toISOString()
+      : null
 
     let durationMinutes = entry.duration_minutes
     if (endISO) {
