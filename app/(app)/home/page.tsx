@@ -20,79 +20,38 @@ export default async function HomePage() {
 
   const today = todayAR()
 
-  // Check-in de hoy
-  const { data: checkinData } = await supabase
-    .from('daily_checkins')
-    .select('*, checkin_tasks(*, clients(id, name))')
-    .eq('user_id', authUser.id)
-    .eq('date', today)
-    .single()
-
-  const checkin = checkinData as (DailyCheckin & { checkin_tasks: (CheckinTask & { clients: Pick<Client, 'id' | 'name'> })[] }) | null
-
-  // Registros de tiempo de hoy
-  const { data: todayEntriesData } = await supabase
-    .from('time_entries')
-    .select('*, clients(id, name)')
-    .eq('user_id', authUser.id)
-    .eq('date', today)
-    .order('start_time', { ascending: true })
-
-  const todayEntries = (todayEntriesData ?? []) as (TimeEntry & { clients: Pick<Client, 'id' | 'name'> })[]
-
-  const totalMinutesToday = todayEntries.reduce((sum, e) => sum + (e.duration_minutes ?? 0), 0)
-
-  // Clientes disponibles para el usuario
-  let assignedClients: Pick<Client, 'id' | 'name'>[] = []
-  if (profile.role === 'admin') {
-    const { data } = await supabase.from('clients').select('id, name').eq('status', 'activo').order('name')
-    assignedClients = (data ?? []) as Pick<Client, 'id' | 'name'>[]
-  } else {
-    const { data: assignments } = await supabase.from('client_assignments').select('client_id').eq('user_id', authUser.id)
-    const ids = ((assignments ?? []) as Pick<ClientAssignment, 'client_id'>[]).map((a) => a.client_id)
-    if (ids.length > 0) {
-      const { data } = await supabase.from('clients').select('id, name').in('id', ids).eq('status', 'activo').order('name')
-      assignedClients = (data ?? []) as Pick<Client, 'id' | 'name'>[]
-    }
-  }
-
-  // Tareas kanban que vencen hoy o mañana, asignadas al usuario, no completadas
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = tomorrow.toISOString().slice(0, 10)
 
-  const { data: kanbanDueData } = await supabase
-    .from('kanban_tasks')
-    .select('id, title, due_date, section, client_id, clients(name), kanban_task_assignees!inner(user_id)')
-    .in('due_date', [today, tomorrowStr])
-    .is('completed_at', null)
-    .neq('section', 'completadas')
-    .eq('kanban_task_assignees.user_id', authUser.id)
-    .order('due_date', { ascending: true })
+  // Queries paralelas — todas independientes entre sí
+  const clientsQuery = profile.role === 'admin'
+    ? supabase.from('clients').select('id, name').eq('status', 'activo').order('name')
+    : supabase.from('client_assignments').select('client_id').eq('user_id', authUser.id)
+
+  const [
+    { data: checkinData },
+    { data: todayEntriesData },
+    { data: kanbanDueData },
+    { data: ticketsData },
+    { data: pendingData },
+    { data: clientsData },
+  ] = await Promise.all([
+    supabase.from('daily_checkins').select('*, checkin_tasks(*, clients(id, name))').eq('user_id', authUser.id).eq('date', today).single(),
+    supabase.from('time_entries').select('*, clients(id, name)').eq('user_id', authUser.id).eq('date', today).order('start_time', { ascending: true }),
+    supabase.from('kanban_tasks').select('id, title, due_date, section, client_id, clients(name), kanban_task_assignees!inner(user_id)').in('due_date', [today, tomorrowStr]).is('completed_at', null).neq('section', 'completadas').eq('kanban_task_assignees.user_id', authUser.id).order('due_date', { ascending: true }),
+    supabase.from('tickets').select('*, clients(id, name)').eq('assigned_to', authUser.id).neq('status', 'completado').order('created_at', { ascending: false }).limit(5),
+    supabase.from('checkin_tasks').select('id, description, status, client_id, checkin_id, clients(name), daily_checkins!inner(date, user_id)').eq('daily_checkins.user_id', authUser.id).lt('daily_checkins.date', today).neq('status', 'completada').order('daily_checkins(date)', { ascending: false }).limit(20),
+    clientsQuery,
+  ])
+
+  const checkin = checkinData as (DailyCheckin & { checkin_tasks: (CheckinTask & { clients: Pick<Client, 'id' | 'name'> })[] }) | null
+  const todayEntries = (todayEntriesData ?? []) as (TimeEntry & { clients: Pick<Client, 'id' | 'name'> })[]
+  const totalMinutesToday = todayEntries.reduce((sum, e) => sum + (e.duration_minutes ?? 0), 0)
+  const tickets = (ticketsData ?? []) as (Ticket & { clients: Pick<Client, 'id' | 'name'> })[]
 
   type KanbanDueTask = { id: string; title: string; due_date: string; section: string; client_id: string; clients: { name: string } | null }
   const kanbanDueTasks = (kanbanDueData ?? []) as unknown as KanbanDueTask[]
-
-  // Tickets asignados pendientes
-  const { data: ticketsData } = await supabase
-    .from('tickets')
-    .select('*, clients(id, name)')
-    .eq('assigned_to', authUser.id)
-    .neq('status', 'completado')
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  const tickets = (ticketsData ?? []) as (Ticket & { clients: Pick<Client, 'id' | 'name'> })[]
-
-  // Tareas pendientes de días anteriores (propias)
-  const { data: pendingData } = await supabase
-    .from('checkin_tasks')
-    .select('id, description, status, client_id, checkin_id, clients(name), daily_checkins!inner(date, user_id)')
-    .eq('daily_checkins.user_id', authUser.id)
-    .lt('daily_checkins.date', today)
-    .neq('status', 'completada')
-    .order('daily_checkins(date)', { ascending: false })
-    .limit(20)
 
   const myPending: PendingTask[] = ((pendingData ?? []) as Record<string, unknown>[]).map((t) => ({
     id: t.id as string,
@@ -102,19 +61,27 @@ export default async function HomePage() {
     date: (t.daily_checkins as { date: string } | null)?.date ?? '',
   }))
 
-  // Tareas pendientes del equipo (solo admin)
-  let teamPending: PendingTask[] = []
-
-  // Si es admin, ver check-ins del equipo
-  let teamCheckins: { user: Pick<User, 'id' | 'name' | 'color'>; checkin: DailyCheckin | null }[] = []
+  // Resolver clientes según rol
+  let assignedClients: Pick<Client, 'id' | 'name'>[] = []
   if (profile.role === 'admin') {
-    const { data: teamPendingData } = await supabase
-      .from('checkin_tasks')
-      .select('id, description, status, client_id, clients(name), daily_checkins!inner(date, user_id, users(name, color))')
-      .lt('daily_checkins.date', today)
-      .neq('status', 'completada')
-      .order('daily_checkins(date)', { ascending: false })
-      .limit(50)
+    assignedClients = (clientsData ?? []) as Pick<Client, 'id' | 'name'>[]
+  } else {
+    const ids = ((clientsData ?? []) as Pick<ClientAssignment, 'client_id'>[]).map((a) => a.client_id)
+    if (ids.length > 0) {
+      const { data } = await supabase.from('clients').select('id, name').in('id', ids).eq('status', 'activo').order('name')
+      assignedClients = (data ?? []) as Pick<Client, 'id' | 'name'>[]
+    }
+  }
+
+  // Queries admin en paralelo
+  let teamPending: PendingTask[] = []
+  let teamCheckins: { user: Pick<User, 'id' | 'name' | 'color'>; checkin: DailyCheckin | null }[] = []
+
+  if (profile.role === 'admin') {
+    const [{ data: teamPendingData }, { data: allUsers }] = await Promise.all([
+      supabase.from('checkin_tasks').select('id, description, status, client_id, clients(name), daily_checkins!inner(date, user_id, users(name, color))').lt('daily_checkins.date', today).neq('status', 'completada').order('daily_checkins(date)', { ascending: false }).limit(50),
+      supabase.from('users').select('id, name, color').neq('id', authUser.id),
+    ])
 
     teamPending = ((teamPendingData ?? []) as Record<string, unknown>[])
       .filter((t) => (t.daily_checkins as { user_id: string } | null)?.user_id !== authUser.id)
@@ -131,22 +98,14 @@ export default async function HomePage() {
         }
       })
 
-    const { data: allUsers } = await supabase
-      .from('users')
-      .select('id, name, color')
-      .neq('id', authUser.id)
-
     if (allUsers) {
-      for (const u of allUsers as Pick<User, 'id' | 'name' | 'color'>[]) {
-        const { data: uc } = await supabase
-          .from('daily_checkins')
-          .select('*')
-          .eq('user_id', u.id)
-          .eq('date', today)
-          .single()
-
-        teamCheckins.push({ user: u, checkin: uc as DailyCheckin | null })
-      }
+      const checkinResults = await Promise.all(
+        (allUsers as Pick<User, 'id' | 'name' | 'color'>[]).map((u) =>
+          supabase.from('daily_checkins').select('*').eq('user_id', u.id).eq('date', today).single()
+            .then(({ data: uc }) => ({ user: u, checkin: uc as DailyCheckin | null }))
+        )
+      )
+      teamCheckins = checkinResults
     }
   }
 
