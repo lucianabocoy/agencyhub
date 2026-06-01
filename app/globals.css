@@ -39,6 +39,9 @@ html, body {
 
 :focus-visible { outline: 2px solid #f7ff5a; outline-offset: 2px; border-radius: 4px; }
 
+/* Native OS dropdown options always render on white background — force dark text */
+option { color: #1a1a2e; background-color: #ffffff; }
+
 /* ─── Print / PDF export ─────────────────────────────────────────────────── */
 @media print {
   @page { size: A4 portrait; margin: 16mm 20mm; }
