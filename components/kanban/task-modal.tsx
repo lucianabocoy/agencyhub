@@ -94,6 +94,12 @@ export function TaskModal({
     setLoading(true)
     setError(null)
 
+    // Auto-include any link typed but not yet confirmed with "+"
+    const pendingLink = newLink.trim()
+    const finalLinks = pendingLink && !form.links.includes(pendingLink)
+      ? [...form.links, pendingLink]
+      : form.links
+
     if (task) {
       // Update task
       const { data, error: err } = await supabase
@@ -104,7 +110,7 @@ export function TaskModal({
           description: form.description || null,
           priority: form.priority,
           due_date: form.due_date || null,
-          links: form.links,
+          links: finalLinks,
           completed_at: form.section === 'completadas' && !task.completed_at
             ? new Date().toISOString()
             : task.completed_at,
@@ -156,7 +162,7 @@ export function TaskModal({
           description: form.description || null,
           priority: form.priority,
           due_date: form.due_date || null,
-          links: form.links,
+          links: finalLinks,
           position: maxPos,
           created_by: currentUserId,
         })
