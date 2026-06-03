@@ -6,7 +6,16 @@ import {
   type KanbanTask, type KanbanComment, type User, type Client,
   type KanbanSection, type Priority, ACTIVITY_TYPES,
 } from '@/types/index'
-import { X, Plus, Trash2, Send, ExternalLink } from 'lucide-react'
+import { X, Plus, Trash2, Send, ExternalLink, AtSign } from 'lucide-react'
+
+function renderCommentContent(content: string) {
+  const parts = content.split(/(@\w+)/g)
+  return parts.map((part, i) =>
+    /^@\w+/.test(part)
+      ? <span key={i} className="text-yesica font-medium">{part}</span>
+      : <span key={i}>{part}</span>
+  )
+}
 
 export interface TaskFull extends KanbanTask {
   assignees: { id: string; user_id: string; users: Pick<User, 'id' | 'name' | 'color' | 'avatar_url'> }[]
@@ -51,7 +60,32 @@ export function TaskModal({
   const [newComment, setNewComment] = useState('')
   const [sendingComment, setSendingComment] = useState(false)
   const [comments, setComments] = useState(task?.kanban_comments ?? [])
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null)
   const commentEndRef = useRef<HTMLDivElement>(null)
+  const commentInputRef = useRef<HTMLInputElement>(null)
+
+  const mentionCandidates = mentionSearch !== null
+    ? users.filter((u) => u.name.split(' ')[0].toLowerCase().startsWith(mentionSearch))
+    : []
+
+  function handleCommentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setNewComment(val)
+    const cursor = e.target.selectionStart ?? val.length
+    const before = val.slice(0, cursor)
+    const m = before.match(/@(\w*)$/)
+    setMentionSearch(m ? m[1].toLowerCase() : null)
+  }
+
+  function selectMention(user: Pick<User, 'id' | 'name' | 'color' | 'avatar_url'>) {
+    const cursor = commentInputRef.current?.selectionStart ?? newComment.length
+    const firstName = user.name.split(' ')[0]
+    const before = newComment.slice(0, cursor).replace(/@\w*$/, `@${firstName} `)
+    const after = newComment.slice(cursor)
+    setNewComment(before + after)
+    setMentionSearch(null)
+    setTimeout(() => commentInputRef.current?.focus(), 0)
+  }
 
   const [form, setForm] = useState({
     client_id: task?.client_id ?? defaultClientId ?? '',
@@ -201,15 +235,35 @@ export function TaskModal({
     if (!newComment.trim() || !task) return
     setSendingComment(true)
 
+    const content = newComment.trim()
     const { data } = await supabase
       .from('kanban_comments')
-      .insert({ task_id: task.id, user_id: currentUserId, content: newComment.trim() })
+      .insert({ task_id: task.id, user_id: currentUserId, content })
       .select('*, users(id, name, color, avatar_url)')
       .single()
 
     if (data) {
       setComments((prev) => [...prev, data as KanbanComment & { users: Pick<User, 'id' | 'name' | 'color' | 'avatar_url'> }])
+
+      // Notify mentioned users
+      const mentionedFirstNames = [...content.matchAll(/@(\w+)/g)].map((m) => m[1].toLowerCase())
+      const senderName = users.find((u) => u.id === currentUserId)?.name ?? 'Alguien'
+      const toNotify = users.filter(
+        (u) => u.id !== currentUserId && mentionedFirstNames.includes(u.name.split(' ')[0].toLowerCase())
+      )
+      for (const u of toNotify) {
+        await supabase.from('notifications').insert({
+          user_id: u.id,
+          type: 'mention',
+          title: 'Te mencionaron en un comentario',
+          message: `${senderName}: "${content.slice(0, 80)}${content.length > 80 ? '…' : ''}"`,
+          reference_type: 'kanban_task',
+          reference_id: task.id,
+        })
+      }
+
       setNewComment('')
+      setMentionSearch(null)
       setTimeout(() => commentEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     }
     setSendingComment(false)
@@ -443,7 +497,7 @@ export function TaskModal({
                           })}
                         </span>
                       </div>
-                      <p className="text-xs text-muted mt-0.5 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                      <p className="text-xs text-muted mt-0.5 leading-relaxed whitespace-pre-wrap">{renderCommentContent(c.content)}</p>
                     </div>
                   </div>
                 ))}
@@ -451,13 +505,38 @@ export function TaskModal({
               </div>
             )}
 
-            <form onSubmit={submitComment} className="flex gap-2">
-              <input
-                type="text" value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Agregar comentario..."
-                className="flex-1 px-3 py-2 text-sm rounded-lg bg-surface-2 border border-border text-text focus:outline-none focus:border-yesica/50"
-              />
+            <form onSubmit={submitComment} className="relative flex gap-2">
+              {/* @mention dropdown */}
+              {mentionCandidates.length > 0 && (
+                <div className="absolute bottom-full mb-1 left-0 right-10 bg-surface border border-border rounded-lg shadow-xl overflow-hidden z-10">
+                  {mentionCandidates.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); selectMention(u) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-2 transition-colors text-left"
+                    >
+                      <span
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-bg flex-shrink-0"
+                        style={{ backgroundColor: u.color ?? '#818cf8' }}
+                      >
+                        {u.name.slice(0, 2).toUpperCase()}
+                      </span>
+                      <span className="text-text">{u.name.split(' ')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex-1 relative">
+                <input
+                  ref={commentInputRef}
+                  type="text" value={newComment}
+                  onChange={handleCommentChange}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setMentionSearch(null) }}
+                  placeholder="Agregar comentario... (@ para mencionar)"
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-surface-2 border border-border text-text focus:outline-none focus:border-yesica/50"
+                />
+              </div>
               <button
                 type="submit" disabled={sendingComment || !newComment.trim()}
                 className="px-3 py-2 bg-yesica/15 hover:bg-yesica/25 text-yesica rounded-lg transition-colors disabled:opacity-40"
