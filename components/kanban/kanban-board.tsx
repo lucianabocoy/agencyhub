@@ -15,6 +15,7 @@ const SECTIONS: { key: KanbanSection; label: string; color: string }[] = [
   { key: 'en_proceso', label: 'En proceso', color: '#818cf8' },
   { key: 'completadas', label: 'Completadas', color: '#34d399' },
   { key: 'reuniones', label: 'Reuniones', color: '#f472b6' },
+  { key: 'reportes', label: 'Reportes', color: '#f97316' },
 ]
 
 interface Props {

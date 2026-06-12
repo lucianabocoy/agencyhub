@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import {
   type User, type Client, type ClientAssignment, type Ticket, type TimeEntry,
-  type Priority, PRIORITY_COLORS,
+  type Priority, PRIORITY_COLORS, type CampaignChangeWithUser,
 } from '@/types/index'
 import { formatARS, formatMinutes } from '@/lib/utils'
 import { ExternalLink, Globe, Calendar, Clock, Kanban, ChevronRight, Edit2 } from 'lucide-react'
 import { CopyLinkButton } from '@/components/clientes/copy-link-button'
+import { RegistroCambios } from '@/components/clientes/registro-cambios'
 
 const STAGE_LABEL: Record<string, string> = { onboarding: 'Onboarding', mantenimiento: 'Mantenimiento' }
 const TYPE_LABEL: Record<string, string> = { ecommerce: 'Ecommerce', servicios: 'Servicios' }
@@ -92,6 +93,20 @@ export default async function ClientDetailPage({
   const totalMinutes = activities.reduce((s, e) => s + (e.duration_minutes ?? 0), 0)
 
   const openTickets = tickets.filter((t) => t.status !== 'completado').length
+
+  const { data: changesData } = await supabase
+    .from('campaign_changes')
+    .select('*, users(id, name, color, avatar_url)')
+    .eq('client_id', id)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+  const campaignChanges = (changesData ?? []) as CampaignChangeWithUser[]
+
+  const { data: usersData } = await supabase
+    .from('users')
+    .select('id, name, color, avatar_url')
+    .order('name')
+  const allUsers = (usersData ?? []) as Pick<User, 'id' | 'name' | 'color' | 'avatar_url'>[]
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
@@ -311,6 +326,14 @@ export default async function ClientDetailPage({
           </div>
         )}
       </div>
+
+      {/* Registro de cambios */}
+      <RegistroCambios
+        clientId={id}
+        currentUserId={authUser.id}
+        users={allUsers}
+        initialChanges={campaignChanges}
+      />
     </div>
   )
 }

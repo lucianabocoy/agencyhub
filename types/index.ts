@@ -5,7 +5,7 @@ export type ClientStatus = 'activo' | 'pausado' | 'baja'
 export type Platform = 'meta_ads' | 'google_ads'
 export type Priority = 'urgente' | 'normal' | 'baja'
 export type CheckinTaskStatus = 'completada' | 'en_progreso' | 'no_iniciada'
-export type KanbanSection = 'info' | 'tareas' | 'en_proceso' | 'completadas' | 'reuniones'
+export type KanbanSection = 'info' | 'tareas' | 'en_proceso' | 'completadas' | 'reuniones' | 'reportes'
 export type TicketStatus = 'nuevo' | 'en_revision' | 'en_proceso' | 'completado'
 export type TicketOrigin = 'whatsapp' | 'reunion' | 'email' | 'interno'
 export type ObjectiveStatus = 'activo' | 'cumplido' | 'no_cumplido'
@@ -218,6 +218,19 @@ export const PRIORITY_COLORS: Record<Priority, string> = {
   urgente: '#f87171',
   normal: '#60a5fa',
   baja: '#8b90a5',
+}
+
+export interface CampaignChange {
+  id: string
+  client_id: string
+  date: string
+  user_id: string
+  action: string
+  created_at: string
+}
+
+export interface CampaignChangeWithUser extends CampaignChange {
+  users: Pick<User, 'id' | 'name' | 'color' | 'avatar_url'>
 }
 
 export const ACTIVITY_TYPES = [

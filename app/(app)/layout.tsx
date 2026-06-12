@@ -4,8 +4,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TimerWidget } from '@/components/timer/timer-widget'
-import { type User, type Client, type ClientAssignment } from '@/types/index'
+import { type User, type Client, type ClientAssignment, type Notification } from '@/types/index'
 import { CheckinGate } from '@/components/checkin/checkin-gate'
+import { DailyToast } from '@/components/notifications/daily-toast'
 import { todayAR } from '@/lib/utils'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -31,12 +32,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('date', today)
     .single()
 
-  // Unread notifications count
-  const { count } = await supabase
+  // Unread notifications
+  const { data: unreadData, count } = await supabase
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('*', { count: 'exact' })
     .eq('user_id', authUser.id)
     .eq('read', false)
+    .order('created_at', { ascending: false })
+    .limit(15)
+  const unreadNotifications = (unreadData ?? []) as Notification[]
 
   // Clientes asignados para el timer (admin ve todos los activos, trafficker solo los suyos)
   let assignedClients: Client[] = []
@@ -80,6 +84,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </div>
+
+      {/* Daily notification toast */}
+      <DailyToast notifications={unreadNotifications} userId={authUser.id} />
 
       {/* Check-in gate — bloquea si no hizo check-in */}
       {!hasCheckin && (

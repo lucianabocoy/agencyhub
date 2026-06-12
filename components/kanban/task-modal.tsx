@@ -42,6 +42,7 @@ const SECTIONS: { value: KanbanSection; label: string }[] = [
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'completadas', label: 'Completadas' },
   { value: 'reuniones', label: 'Reuniones' },
+  { value: 'reportes', label: 'Reportes' },
 ]
 
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
@@ -230,8 +231,7 @@ export function TaskModal({
     }
   }
 
-  async function submitComment(e: React.FormEvent) {
-    e.preventDefault()
+  async function submitComment() {
     if (!newComment.trim() || !task) return
     setSendingComment(true)
 
@@ -280,56 +280,149 @@ export function TaskModal({
   const labelCls = 'block text-xs font-medium text-muted mb-1.5'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-bg/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface border border-border rounded-xl w-full max-w-xl shadow-2xl mb-8">
+      <form
+        onSubmit={handleSubmit}
+        className="relative bg-surface border border-border rounded-xl w-full max-w-4xl shadow-2xl flex flex-col"
+        style={{ maxHeight: '90vh' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <h2 className="text-sm font-semibold text-text">
             {task ? 'Editar tarea' : 'Nueva tarea'}
           </h2>
-          <button onClick={onClose} className="text-muted hover:text-text transition-colors">
+          <button type="button" onClick={onClose} className="text-muted hover:text-text transition-colors">
             <X size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Client */}
-          <div>
-            <label className={labelCls}>Cliente <span className="text-danger">*</span></label>
-            <select
-              value={form.client_id}
-              onChange={(e) => setForm((p) => ({ ...p, client_id: e.target.value }))}
-              disabled={!!task}
-              className={inputCls}
-            >
-              <option value="">— Seleccionar —</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+        {/* Two-column body */}
+        <div className="flex flex-1 min-h-0">
+
+          {/* ── Left: Title + Description + Comments ── */}
+          <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Title */}
+              <div>
+                <label className={labelCls}>Título <span className="text-danger">*</span></label>
+                <input
+                  type="text" value={form.title}
+                  onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="¿Qué hay que hacer?" required className={inputCls}
+                />
+              </div>
+
+              {/* Description — fills available space */}
+              <div className="flex flex-col flex-1">
+                <label className={labelCls}>Descripción</label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Detalles, contexto..."
+                  className={`${inputCls} resize-none`}
+                  style={{ minHeight: '280px' }}
+                />
+              </div>
+            </div>
+
+            {/* Comments — pinned at bottom of left col */}
+            {task && (
+              <div className="border-t border-border px-5 py-4 space-y-3 flex-shrink-0">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
+                  Comentarios ({comments.length})
+                </h3>
+
+                {comments.length > 0 && (
+                  <div className="space-y-3 max-h-40 overflow-y-auto">
+                    {comments.map((c) => (
+                      <div key={c.id} className="flex gap-2.5">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg flex-shrink-0 mt-0.5"
+                          style={{ backgroundColor: c.users?.color ?? '#818cf8' }}
+                        >
+                          {(c.users?.name ?? '?').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xs font-medium text-text">{c.users?.name}</span>
+                            <span className="text-[10px] text-muted">
+                              {new Date(c.created_at).toLocaleDateString('es-AR', {
+                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted mt-0.5 leading-relaxed whitespace-pre-wrap">{renderCommentContent(c.content)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={commentEndRef} />
+                  </div>
+                )}
+
+                {/* Comment input — not a nested form */}
+                <div className="relative flex gap-2">
+                  {mentionCandidates.length > 0 && (
+                    <div className="absolute bottom-full mb-1 left-0 right-10 bg-surface border border-border rounded-lg shadow-xl overflow-hidden z-10">
+                      {mentionCandidates.map((u) => (
+                        <button
+                          key={u.id} type="button"
+                          onMouseDown={(e) => { e.preventDefault(); selectMention(u) }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-2 transition-colors text-left"
+                        >
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-bg flex-shrink-0"
+                            style={{ backgroundColor: u.color ?? '#818cf8' }}
+                          >
+                            {u.name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <span className="text-text">{u.name.split(' ')[0]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex-1 relative">
+                    <input
+                      ref={commentInputRef}
+                      type="text" value={newComment}
+                      onChange={handleCommentChange}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); submitComment() }
+                        if (e.key === 'Escape') setMentionSearch(null)
+                      }}
+                      placeholder="Agregar comentario... (@ para mencionar)"
+                      className="w-full px-3 py-2 text-sm rounded-lg bg-surface-2 border border-border text-text focus:outline-none focus:border-yesica/50"
+                    />
+                  </div>
+                  <button
+                    type="button" onClick={submitComment}
+                    disabled={sendingComment || !newComment.trim()}
+                    className="px-3 py-2 bg-yesica/15 hover:bg-yesica/25 text-yesica rounded-lg transition-colors disabled:opacity-40"
+                  >
+                    <Send size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Title */}
-          <div>
-            <label className={labelCls}>Título <span className="text-danger">*</span></label>
-            <input
-              type="text" value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="¿Qué hay que hacer?" required className={inputCls}
-            />
-          </div>
+          {/* ── Right: metadata + actions ── */}
+          <div className="w-72 flex-shrink-0 overflow-y-auto p-5 space-y-4">
+            {/* Client */}
+            <div>
+              <label className={labelCls}>Cliente <span className="text-danger">*</span></label>
+              <select
+                value={form.client_id}
+                onChange={(e) => setForm((p) => ({ ...p, client_id: e.target.value }))}
+                disabled={!!task}
+                className={inputCls}
+              >
+                <option value="">— Seleccionar —</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
 
-          {/* Description */}
-          <div>
-            <label className={labelCls}>Descripción</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              rows={3} placeholder="Detalles, contexto..." className={`${inputCls} resize-none`}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {/* Section */}
+            {/* Column */}
             <div>
               <label className={labelCls}>Columna</label>
               <select
@@ -350,203 +443,126 @@ export function TaskModal({
                 className={inputCls}
               />
             </div>
-          </div>
 
-          {/* Priority */}
-          <div>
-            <label className={labelCls}>Prioridad</label>
-            <div className="flex gap-2">
-              {PRIORITY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value} type="button"
-                  onClick={() => setForm((p) => ({ ...p, priority: opt.value }))}
-                  className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                    form.priority === opt.value
-                      ? 'border-transparent text-bg'
-                      : 'bg-surface-2 text-muted border-border hover:border-muted'
-                  }`}
-                  style={form.priority === opt.value ? { backgroundColor: opt.color } : {}}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Assignees */}
-          <div>
-            <label className={labelCls}>Responsables</label>
-            <div className="flex gap-2 flex-wrap">
-              {users.map((u) => {
-                const selected = form.assigneeIds.includes(u.id)
-                return (
+            {/* Priority */}
+            <div>
+              <label className={labelCls}>Prioridad</label>
+              <div className="flex gap-2">
+                {PRIORITY_OPTIONS.map((opt) => (
                   <button
-                    key={u.id} type="button" onClick={() => toggleAssignee(u.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      selected
+                    key={opt.value} type="button"
+                    onClick={() => setForm((p) => ({ ...p, priority: opt.value }))}
+                    className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                      form.priority === opt.value
                         ? 'border-transparent text-bg'
                         : 'bg-surface-2 text-muted border-border hover:border-muted'
                     }`}
-                    style={selected ? { backgroundColor: u.color ?? '#818cf8' } : {}}
+                    style={form.priority === opt.value ? { backgroundColor: opt.color } : {}}
                   >
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
-                      style={{ backgroundColor: selected ? 'rgba(255,255,255,0.3)' : (u.color ?? '#818cf8'), color: '#0f1117' }}>
-                      {u.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    {u.name.split(' ')[0]}
+                    {opt.label}
                   </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Links */}
-          <div>
-            <label className={labelCls}>Links</label>
-            {form.links.length > 0 && (
-              <div className="space-y-1 mb-2">
-                {form.links.map((link) => (
-                  <div key={link} className="flex items-center gap-2 text-xs">
-                    <ExternalLink size={11} className="text-muted flex-shrink-0" />
-                    <a
-                      href={link} target="_blank" rel="noreferrer"
-                      className="text-yesica hover:underline truncate flex-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {link}
-                    </a>
-                    <button
-                      type="button" onClick={() => removeLink(link)}
-                      className="text-muted hover:text-danger transition-colors flex-shrink-0"
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
                 ))}
               </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="url" value={newLink}
-                onChange={(e) => setNewLink(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
-                placeholder="https://..." className={`${inputCls} flex-1`}
-              />
-              <button
-                type="button" onClick={addLink}
-                className="px-3 py-2.5 bg-surface-2 border border-border hover:border-muted rounded-lg text-muted hover:text-text transition-colors"
-              >
-                <Plus size={14} />
-              </button>
             </div>
-          </div>
 
-          {error && (
-            <p className="text-danger text-sm bg-danger/10 border border-danger/20 px-3 py-2 rounded-lg">{error}</p>
-          )}
-
-          <div className="flex items-center gap-3 pt-1">
-            {task && (isAdmin || task.created_by === currentUserId) && onDelete && (
-              <button
-                type="button" onClick={handleDelete}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-danger hover:bg-danger/10 border border-danger/20 rounded-lg transition-colors"
-              >
-                <Trash2 size={14} /> Eliminar
-              </button>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <button
-                type="button" onClick={onClose}
-                className="px-4 py-2.5 border border-border text-muted hover:text-text hover:border-muted rounded-lg text-sm transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit" disabled={loading}
-                className="px-5 py-2.5 bg-yesica hover:bg-yesica/80 text-bg font-semibold rounded-lg text-sm transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Guardando...' : task ? 'Guardar' : 'Crear tarea'}
-              </button>
-            </div>
-          </div>
-        </form>
-
-        {/* Comments section — only when editing */}
-        {task && (
-          <div className="border-t border-border px-5 py-4 space-y-3">
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
-              Comentarios ({comments.length})
-            </h3>
-
-            {comments.length > 0 && (
-              <div className="space-y-3 max-h-48 overflow-y-auto">
-                {comments.map((c) => (
-                  <div key={c.id} className="flex gap-2.5">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg flex-shrink-0 mt-0.5"
-                      style={{ backgroundColor: c.users?.color ?? '#818cf8' }}
-                    >
-                      {(c.users?.name ?? '?').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-xs font-medium text-text">{c.users?.name}</span>
-                        <span className="text-[10px] text-muted">
-                          {new Date(c.created_at).toLocaleDateString('es-AR', {
-                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted mt-0.5 leading-relaxed whitespace-pre-wrap">{renderCommentContent(c.content)}</p>
-                    </div>
-                  </div>
-                ))}
-                <div ref={commentEndRef} />
-              </div>
-            )}
-
-            <form onSubmit={submitComment} className="relative flex gap-2">
-              {/* @mention dropdown */}
-              {mentionCandidates.length > 0 && (
-                <div className="absolute bottom-full mb-1 left-0 right-10 bg-surface border border-border rounded-lg shadow-xl overflow-hidden z-10">
-                  {mentionCandidates.map((u) => (
+            {/* Assignees */}
+            <div>
+              <label className={labelCls}>Responsables</label>
+              <div className="flex gap-2 flex-wrap">
+                {users.map((u) => {
+                  const selected = form.assigneeIds.includes(u.id)
+                  return (
                     <button
-                      key={u.id}
-                      type="button"
-                      onMouseDown={(e) => { e.preventDefault(); selectMention(u) }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-2 transition-colors text-left"
+                      key={u.id} type="button" onClick={() => toggleAssignee(u.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        selected
+                          ? 'border-transparent text-bg'
+                          : 'bg-surface-2 text-muted border-border hover:border-muted'
+                      }`}
+                      style={selected ? { backgroundColor: u.color ?? '#818cf8' } : {}}
                     >
-                      <span
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-bg flex-shrink-0"
-                        style={{ backgroundColor: u.color ?? '#818cf8' }}
-                      >
+                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                        style={{ backgroundColor: selected ? 'rgba(255,255,255,0.3)' : (u.color ?? '#818cf8'), color: '#0f1117' }}>
                         {u.name.slice(0, 2).toUpperCase()}
                       </span>
-                      <span className="text-text">{u.name.split(' ')[0]}</span>
+                      {u.name.split(' ')[0]}
                     </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Links */}
+            <div>
+              <label className={labelCls}>Links</label>
+              {form.links.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {form.links.map((link) => (
+                    <div key={link} className="flex items-center gap-2 text-xs">
+                      <ExternalLink size={11} className="text-muted flex-shrink-0" />
+                      <a
+                        href={link} target="_blank" rel="noreferrer"
+                        className="text-yesica hover:underline truncate flex-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {link}
+                      </a>
+                      <button
+                        type="button" onClick={() => removeLink(link)}
+                        className="text-muted hover:text-danger transition-colors flex-shrink-0"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
-              <div className="flex-1 relative">
+              <div className="flex gap-2">
                 <input
-                  ref={commentInputRef}
-                  type="text" value={newComment}
-                  onChange={handleCommentChange}
-                  onKeyDown={(e) => { if (e.key === 'Escape') setMentionSearch(null) }}
-                  placeholder="Agregar comentario... (@ para mencionar)"
-                  className="w-full px-3 py-2 text-sm rounded-lg bg-surface-2 border border-border text-text focus:outline-none focus:border-yesica/50"
+                  type="url" value={newLink}
+                  onChange={(e) => setNewLink(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
+                  placeholder="https://..." className={`${inputCls} flex-1`}
                 />
+                <button
+                  type="button" onClick={addLink}
+                  className="px-3 py-2.5 bg-surface-2 border border-border hover:border-muted rounded-lg text-muted hover:text-text transition-colors"
+                >
+                  <Plus size={14} />
+                </button>
               </div>
+            </div>
+
+            {error && (
+              <p className="text-danger text-sm bg-danger/10 border border-danger/20 px-3 py-2 rounded-lg">{error}</p>
+            )}
+
+            {/* Action buttons */}
+            <div className="space-y-2 pt-1">
               <button
-                type="submit" disabled={sendingComment || !newComment.trim()}
-                className="px-3 py-2 bg-yesica/15 hover:bg-yesica/25 text-yesica rounded-lg transition-colors disabled:opacity-40"
+                type="submit" disabled={loading}
+                className="w-full py-2.5 bg-yesica hover:bg-yesica/80 text-bg font-semibold rounded-lg text-sm transition-colors disabled:opacity-50"
               >
-                <Send size={14} />
+                {loading ? 'Guardando...' : task ? 'Guardar cambios' : 'Crear tarea'}
               </button>
-            </form>
+              <button
+                type="button" onClick={onClose}
+                className="w-full py-2.5 border border-border text-muted hover:text-text hover:border-muted rounded-lg text-sm transition-colors"
+              >
+                Cancelar
+              </button>
+              {task && (isAdmin || task.created_by === currentUserId) && onDelete && (
+                <button
+                  type="button" onClick={handleDelete}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm text-danger hover:bg-danger/10 border border-danger/20 rounded-lg transition-colors"
+                >
+                  <Trash2 size={14} /> Eliminar tarea
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      </form>
     </div>
   )
 }
