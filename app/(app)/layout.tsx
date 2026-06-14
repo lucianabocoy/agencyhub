@@ -7,6 +7,7 @@ import { TimerWidget } from '@/components/timer/timer-widget'
 import { type User, type Client, type ClientAssignment, type Notification } from '@/types/index'
 import { CheckinGate } from '@/components/checkin/checkin-gate'
 import { DailyToast } from '@/components/notifications/daily-toast'
+import { RealtimeNotifications } from '@/components/notifications/realtime-notifications'
 import { todayAR } from '@/lib/utils'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -85,8 +86,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
-      {/* Daily notification toast */}
+      {/* Daily notification toast — una vez por día */}
       <DailyToast notifications={unreadNotifications} userId={authUser.id} />
+
+      {/* Notificaciones en tiempo real — aparecen al instante */}
+      <RealtimeNotifications userId={authUser.id} />
 
       {/* Check-in gate — bloquea si no hizo check-in */}
       {!hasCheckin && (

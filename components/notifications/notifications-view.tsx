@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type Notification, type NotificationType } from '@/types/index'
 import {
-  CheckSquare, Ticket, Bell, Clock, AlertTriangle, Target,
+  CheckSquare, Ticket, Bell, Clock, AlertTriangle, Target, Check, MessageSquare,
 } from 'lucide-react'
 
 const TYPE_ICON: Record<NotificationType, React.ElementType> = {
   task_assigned: CheckSquare,
-  task_mentioned: CheckSquare,
+  task_mentioned: MessageSquare,
   ticket_created: Ticket,
   checkin_reminder: Clock,
   checkout_reminder: Clock,
@@ -20,7 +20,7 @@ const TYPE_ICON: Record<NotificationType, React.ElementType> = {
 
 const TYPE_COLOR: Record<NotificationType, string> = {
   task_assigned: 'text-yesica bg-yesica/10',
-  task_mentioned: 'text-yesica bg-yesica/10',
+  task_mentioned: 'text-luciana bg-luciana/10',
   ticket_created: 'text-warning bg-warning/10',
   checkin_reminder: 'text-muted bg-surface-2',
   checkout_reminder: 'text-muted bg-surface-2',
@@ -66,45 +66,58 @@ export function NotificationsView({ notifications: initial, userId }: Props) {
   return (
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
       {unreadCount > 0 && (
-        <div className="px-5 py-3 border-b border-border flex justify-end">
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+          <span className="text-xs text-muted">{unreadCount} sin leer</span>
           <button
             onClick={markAllRead}
-            className="text-xs text-yesica hover:text-yesica/80 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-yesica hover:text-yesica/80 transition-colors"
           >
-            Marcar todo como leído
+            <Check size={12} /> Marcar todo como visto
           </button>
         </div>
       )}
 
       <div className="divide-y divide-border">
         {items.map((n) => {
-          const Icon = TYPE_ICON[n.type] ?? Bell
-          const colorCls = TYPE_COLOR[n.type] ?? 'text-muted bg-surface-2'
+          const Icon = TYPE_ICON[n.type as NotificationType] ?? Bell
+          const colorCls = TYPE_COLOR[n.type as NotificationType] ?? 'text-muted bg-surface-2'
 
           return (
-            <button
+            <div
               key={n.id}
-              onClick={() => !n.read && markRead(n.id)}
-              className={`w-full text-left px-5 py-4 flex items-start gap-3 transition-colors hover:bg-surface-2 ${!n.read ? 'bg-surface-2/50' : ''}`}
+              className={`flex items-start gap-3 px-5 py-4 transition-colors ${!n.read ? 'bg-surface-2/40' : ''}`}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colorCls}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${colorCls}`}>
                 <Icon size={15} />
               </div>
+
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-medium ${n.read ? 'text-muted' : 'text-text'}`}>
                   {n.title}
                 </p>
-                <p className="text-xs text-muted mt-0.5">{n.message}</p>
-                <p className="text-xs text-muted/60 mt-1">
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">{n.message}</p>
+                <p className="text-xs text-muted/50 mt-1">
                   {new Date(n.created_at).toLocaleDateString('es-AR', {
                     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                   })}
                 </p>
               </div>
-              {!n.read && (
-                <div className="w-2 h-2 rounded-full bg-yesica flex-shrink-0 mt-1.5" />
+
+              {/* Tilde para marcar como vista */}
+              {!n.read ? (
+                <button
+                  onClick={() => markRead(n.id)}
+                  title="Marcar como vista"
+                  className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-lg border-2 border-border hover:border-success hover:bg-success/10 text-muted hover:text-success flex items-center justify-center transition-all"
+                >
+                  <Check size={13} />
+                </button>
+              ) : (
+                <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-lg bg-success/15 flex items-center justify-center">
+                  <Check size={13} className="text-success" />
+                </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>

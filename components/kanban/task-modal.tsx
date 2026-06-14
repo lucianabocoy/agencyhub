@@ -254,7 +254,7 @@ export function TaskModal({
       for (const u of toNotify) {
         await supabase.from('notifications').insert({
           user_id: u.id,
-          type: 'mention',
+          type: 'task_mentioned',
           title: 'Te mencionaron en un comentario',
           message: `${senderName}: "${content.slice(0, 80)}${content.length > 80 ? '…' : ''}"`,
           reference_type: 'kanban_task',
