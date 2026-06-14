@@ -1,11 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { type Notification, type NotificationType } from '@/types/index'
 import {
   CheckSquare, Ticket, Bell, Clock, AlertTriangle, Target, Check, MessageSquare,
 } from 'lucide-react'
+
+function notifUrl(n: Notification): string | null {
+  if (n.reference_type === 'kanban_task' && n.reference_id) {
+    return `/kanban?task=${n.reference_id}`
+  }
+  if (n.reference_type === 'ticket' && n.reference_id) {
+    return `/tickets?id=${n.reference_id}`
+  }
+  return null
+}
 
 const TYPE_ICON: Record<NotificationType, React.ElementType> = {
   task_assigned: CheckSquare,
@@ -36,6 +47,7 @@ interface Props {
 
 export function NotificationsView({ notifications: initial, userId }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [items, setItems] = useState(initial)
 
   async function markAllRead() {
@@ -82,10 +94,16 @@ export function NotificationsView({ notifications: initial, userId }: Props) {
           const Icon = TYPE_ICON[n.type as NotificationType] ?? Bell
           const colorCls = TYPE_COLOR[n.type as NotificationType] ?? 'text-muted bg-surface-2'
 
+          const url = notifUrl(n)
+
           return (
             <div
               key={n.id}
-              className={`flex items-start gap-3 px-5 py-4 transition-colors ${!n.read ? 'bg-surface-2/40' : ''}`}
+              onClick={async () => {
+                if (!n.read) await markRead(n.id)
+                if (url) router.push(url)
+              }}
+              className={`flex items-start gap-3 px-5 py-4 transition-colors ${url ? 'cursor-pointer hover:bg-surface-2' : ''} ${!n.read ? 'bg-surface-2/40' : ''}`}
             >
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${colorCls}`}>
                 <Icon size={15} />

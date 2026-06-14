@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   type KanbanTask, type KanbanSection, type Client, type User,
@@ -25,10 +25,11 @@ interface Props {
   currentUserId: string
   isAdmin: boolean
   initialClientId?: string
+  initialTaskId?: string
 }
 
 export function KanbanBoard({
-  initialTasks, clients, users, currentUserId, isAdmin, initialClientId,
+  initialTasks, clients, users, currentUserId, isAdmin, initialClientId, initialTaskId,
 }: Props) {
   const supabase = createClient()
   const [tasks, setTasks] = useState(initialTasks)
@@ -39,6 +40,13 @@ export function KanbanBoard({
   const [modal, setModal] = useState<
     null | { mode: 'create'; section: KanbanSection } | { mode: 'edit'; task: TaskFull }
   >(null)
+
+  // Abrir tarea automáticamente si viene desde una notificación
+  useEffect(() => {
+    if (!initialTaskId) return
+    const task = initialTasks.find((t) => t.id === initialTaskId)
+    if (task) setModal({ mode: 'edit', task })
+  }, [initialTaskId, initialTasks])
 
   const filteredTasks = tasks
     .filter((t) => !clientFilter || t.client_id === clientFilter)

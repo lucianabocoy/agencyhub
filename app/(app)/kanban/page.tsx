@@ -9,9 +9,9 @@ import { type TaskFull } from '@/components/kanban/task-modal'
 export default async function KanbanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string }>
+  searchParams: Promise<{ client?: string; task?: string }>
 }) {
-  const { client: initialClientId } = await searchParams
+  const { client: initialClientId, task: initialTaskId } = await searchParams
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
   if (!authUser) redirect('/login')
@@ -76,6 +76,7 @@ export default async function KanbanPage({
         currentUserId={authUser.id}
         isAdmin={isAdmin}
         initialClientId={initialClientId}
+        initialTaskId={initialTaskId}
       />
     </div>
   )

@@ -1,9 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { type Notification } from '@/types/index'
-import { X, Check, MessageSquare, CheckSquare, Bell } from 'lucide-react'
+import { X, Check, MessageSquare, CheckSquare } from 'lucide-react'
+
+function notifUrl(n: Notification): string | null {
+  if (n.reference_type === 'kanban_task' && n.reference_id) {
+    return `/kanban?task=${n.reference_id}`
+  }
+  return null
+}
 
 interface ToastNotif extends Notification {
   visible: boolean
@@ -15,6 +23,7 @@ interface Props {
 
 export function RealtimeNotifications({ userId }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [toasts, setToasts] = useState<ToastNotif[]>([])
 
   const dismiss = useCallback(async (id: string, markRead = false) => {
@@ -73,10 +82,20 @@ export function RealtimeNotifications({ userId }: Props) {
                 <Icon size={14} className="text-yesica" />
               </div>
 
-              <div className="flex-1 min-w-0">
+              <button
+                className="flex-1 min-w-0 text-left"
+                onClick={async () => {
+                  await dismiss(toast.id, true)
+                  const url = notifUrl(toast)
+                  if (url) router.push(url)
+                }}
+              >
                 <p className="text-xs font-semibold text-text leading-snug">{toast.title}</p>
                 <p className="text-xs text-muted mt-1 leading-relaxed line-clamp-3">{toast.message}</p>
-              </div>
+                {notifUrl(toast) && (
+                  <p className="text-[10px] text-yesica mt-1.5">Tap para abrir la tarea →</p>
+                )}
+              </button>
 
               <div className="flex flex-col gap-1 flex-shrink-0 ml-1">
                 {/* Tilde = marcar como vista */}
