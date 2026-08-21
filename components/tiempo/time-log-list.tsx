@@ -97,7 +97,7 @@ export function TimeLogList({ initialEntries, allClients, today }: Props) {
   const inputCls = 'px-2 py-1 text-xs rounded-lg bg-surface border border-border text-text focus:outline-none focus:border-yesica/50'
 
   return (
-    <div className="divide-y divide-border max-h-[520px] overflow-y-auto">
+    <div className="divide-y divide-border overflow-y-auto flex-1 min-h-0">
       {Object.keys(byDate).length === 0 ? (
         <p className="px-4 py-12 text-muted text-sm text-center">Sin registros en los últimos 7 días.</p>
       ) : (

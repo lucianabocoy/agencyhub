@@ -36,13 +36,16 @@ interface Props {
   onDelete?: (id: string) => void
 }
 
-const SECTIONS: { value: KanbanSection; label: string }[] = [
+const AGENCIA_CLIENT_ID = '1881f6c4-c635-44a6-8032-a4930ced612c'
+
+const SECTIONS: { value: KanbanSection; label: string; onlyFor?: string }[] = [
   { value: 'info', label: 'Información' },
   { value: 'tareas', label: 'Pendientes' },
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'completadas', label: 'Completadas' },
   { value: 'reuniones', label: 'Reuniones' },
   { value: 'reportes', label: 'Reportes' },
+  { value: 'reunion_de_equipo', label: 'Reunión de equipo', onlyFor: AGENCIA_CLIENT_ID },
 ]
 
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
@@ -172,7 +175,7 @@ export function TaskModal({
             user_id: userId,
             type: 'task_assigned',
             title: 'Tarea asignada',
-            message: `Se te asignó: "${form.title.trim()}"`,
+            message: `Se te asignó: "${form.title.trim()}" · ${clients.find((c) => c.id === form.client_id)?.name ?? ''}`,
             reference_type: 'kanban_task',
             reference_id: task.id,
           })
@@ -214,7 +217,7 @@ export function TaskModal({
             user_id: userId,
             type: 'task_assigned',
             title: 'Nueva tarea asignada',
-            message: `Se te asignó: "${form.title.trim()}"`,
+            message: `Se te asignó: "${form.title.trim()}" · ${clients.find((c) => c.id === form.client_id)?.name ?? ''}`,
             reference_type: 'kanban_task',
             reference_id: taskId,
           })
@@ -256,7 +259,7 @@ export function TaskModal({
           user_id: u.id,
           type: 'task_mentioned',
           title: 'Te mencionaron en un comentario',
-          message: `${senderName}: "${content.slice(0, 80)}${content.length > 80 ? '…' : ''}"`,
+          message: `${senderName}: "${content.slice(0, 80)}${content.length > 80 ? '…' : ''}" · ${task.clients?.name ?? ''}`,
           reference_type: 'kanban_task',
           reference_id: task.id,
         })
@@ -430,7 +433,9 @@ export function TaskModal({
                 onChange={(e) => setForm((p) => ({ ...p, section: e.target.value as KanbanSection }))}
                 className={inputCls}
               >
-                {SECTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {SECTIONS
+                  .filter((s) => !s.onlyFor || form.client_id === s.onlyFor)
+                  .map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
 

@@ -9,13 +9,16 @@ import {
 import { TaskModal, type TaskFull } from './task-modal'
 import { Plus, MessageSquare, Calendar, SlidersHorizontal } from 'lucide-react'
 
-const SECTIONS: { key: KanbanSection; label: string; color: string }[] = [
+const AGENCIA_CLIENT_ID = '1881f6c4-c635-44a6-8032-a4930ced612c'
+
+const SECTIONS: { key: KanbanSection; label: string; color: string; onlyFor?: string }[] = [
   { key: 'info', label: 'Información', color: '#60a5fa' },
   { key: 'tareas', label: 'Pendientes', color: '#fbbf24' },
   { key: 'en_proceso', label: 'En proceso', color: '#818cf8' },
   { key: 'completadas', label: 'Completadas', color: '#34d399' },
   { key: 'reuniones', label: 'Reuniones', color: '#f472b6' },
   { key: 'reportes', label: 'Reportes', color: '#f97316' },
+  { key: 'reunion_de_equipo', label: 'Reunión de equipo', color: '#a78bfa', onlyFor: AGENCIA_CLIENT_ID },
 ]
 
 interface Props {
@@ -40,6 +43,7 @@ export function KanbanBoard({
   const [modal, setModal] = useState<
     null | { mode: 'create'; section: KanbanSection } | { mode: 'edit'; task: TaskFull }
   >(null)
+  const [dropError, setDropError] = useState<string | null>(null)
 
   // Abrir tarea automáticamente si viene desde una notificación
   useEffect(() => {
@@ -47,6 +51,10 @@ export function KanbanBoard({
     const task = initialTasks.find((t) => t.id === initialTaskId)
     if (task) setModal({ mode: 'edit', task })
   }, [initialTaskId, initialTasks])
+
+  const visibleSections = SECTIONS.filter(
+    (s) => !s.onlyFor || clientFilter === s.onlyFor
+  )
 
   const filteredTasks = tasks
     .filter((t) => !clientFilter || t.client_id === clientFilter)
@@ -95,13 +103,21 @@ export function KanbanBoard({
         : task.completed_at,
     }
 
-    setTasks((prev) => prev.map((t) => t.id === draggedId ? { ...t, ...updates } : t))
+    const movedId = draggedId
+    setTasks((prev) => prev.map((t) => t.id === movedId ? { ...t, ...updates } : t))
     setDraggedId(null)
 
-    await supabase
+    const { data, error } = await supabase
       .from('kanban_tasks')
       .update(updates)
-      .eq('id', draggedId)
+      .eq('id', movedId)
+      .select()
+
+    if (error || !data || data.length === 0) {
+      setTasks((prev) => prev.map((t) => t.id === movedId ? task : t))
+      setDropError('No tenés permiso para mover esta tarea.')
+      setTimeout(() => setDropError(null), 4000)
+    }
   }
 
   function handleSave(saved: TaskFull) {
@@ -120,6 +136,13 @@ export function KanbanBoard({
 
   return (
     <div className="flex flex-col h-full gap-4">
+      {/* Drop error toast */}
+      {dropError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-danger/90 text-white text-sm rounded-lg shadow-xl">
+          {dropError}
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
         <h1 className="text-xl font-bold text-text">Kanban</h1>
@@ -188,7 +211,7 @@ export function KanbanBoard({
 
       {/* Board */}
       <div className="flex gap-4 flex-1 overflow-x-auto pb-2">
-        {SECTIONS.map((sec) => {
+        {visibleSections.map((sec) => {
           const sectionTasks = tasksInSection(sec.key)
           const isDragTarget = dragOver === sec.key
 
