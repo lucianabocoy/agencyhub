@@ -71,27 +71,33 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
         <p className="text-muted text-sm mt-0.5">Honorarios, facturación y datos fiscales de cada cliente.</p>
       </div>
 
-      {/* Resumen: cuánto se está facturando */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <p className="text-xs text-muted mb-1">Clientes activos</p>
-          <p className="text-xl font-bold text-text">{activeClientCount}</p>
+      {/* Resumen principal: clientes activos y cuánto se factura */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-yesica/10 border border-yesica/30 rounded-xl p-4">
+          <p className="text-xs text-yesica/70 mb-1">Clientes activos</p>
+          <p className="text-2xl font-bold text-yesica">{activeClientCount}</p>
         </div>
-        {['ARS', 'USD'].map((cur) => (
-          <div key={cur} className="bg-surface border border-border rounded-xl p-4">
-            <p className="text-xs text-muted mb-1">Facturando en {cur} (clientes activos)</p>
-            <p className="text-xl font-bold text-text">
-              {formatFee(totals[cur] ?? 0, cur as FeeCurrency)}
-            </p>
-          </div>
-        ))}
-        {byAccount.map(([account, v]) => (
-          <div key={account} className="bg-surface border border-border rounded-xl p-4">
-            <p className="text-xs text-muted mb-1">{account} · {v.count} {v.count === 1 ? 'cuenta' : 'cuentas'}</p>
-            <p className="text-xl font-bold text-text">{formatFee(v.total, v.currency as FeeCurrency)}</p>
-          </div>
-        ))}
+        <div className="bg-yesica/10 border border-yesica/30 rounded-xl p-4">
+          <p className="text-xs text-yesica/70 mb-1">Facturando en USD (clientes activos)</p>
+          <p className="text-2xl font-bold text-yesica">{formatFee(totals.USD ?? 0, 'USD')}</p>
+        </div>
+        <div className="bg-yesica/10 border border-yesica/30 rounded-xl p-4">
+          <p className="text-xs text-yesica/70 mb-1">Facturando en ARS (clientes activos)</p>
+          <p className="text-2xl font-bold text-yesica">{formatFee(totals.ARS ?? 0, 'ARS')}</p>
+        </div>
       </div>
+
+      {/* Desglose por cuenta de cobro */}
+      {byAccount.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {byAccount.map(([account, v]) => (
+            <div key={account} className="bg-surface border border-border rounded-xl p-3">
+              <p className="text-xs text-muted mb-1">{account} · {v.count} {v.count === 1 ? 'cuenta' : 'cuentas'}</p>
+              <p className="text-lg font-bold text-text">{formatFee(v.total, v.currency as FeeCurrency)}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filtro de estado */}
       <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-0.5 w-fit">
