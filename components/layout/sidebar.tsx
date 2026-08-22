@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { type UserRole } from '@/types/index'
 import {
   LayoutDashboard, Users, Clock, CheckSquare,
-  Ticket, Target, BarChart3, TrendingUp, FileText, LogOut, Bell,
+  Ticket, Target, BarChart3, TrendingUp, FileText, LogOut, Bell, UserPlus,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -29,6 +29,7 @@ const NAV: NavItem[] = [
   { label: 'Métricas', href: '/metricas', icon: TrendingUp, roles: ['admin', 'trafficker'] },
   { label: 'Reportes', href: '/reportes', icon: FileText, roles: ['admin', 'trafficker'] },
   { label: 'Dashboard', href: '/dashboard', icon: BarChart3, roles: ['admin', 'trafficker'] },
+  { label: 'Equipo', href: '/equipo', icon: UserPlus, roles: ['admin'] },
 ]
 
 interface SidebarProps {
