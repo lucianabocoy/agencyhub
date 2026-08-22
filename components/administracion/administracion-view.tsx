@@ -17,7 +17,7 @@ const AGENCIA_CLIENT_ID = '1881f6c4-c635-44a6-8032-a4930ced612c'
 const STATUS_LABEL: Record<ClientStatus, string> = { activo: 'Activo', pausado: 'Pausado', baja: 'Baja' }
 const STATUS_DOT: Record<ClientStatus, string> = { activo: 'bg-success', pausado: 'bg-warning', baja: 'bg-danger' }
 
-const PAYMENT_ACCOUNT_SUGGESTIONS = ['Luciana ARS', 'Luciana USD', 'Bruno USD']
+const PAYMENT_ACCOUNT_SUGGESTIONS = ['Luciana ARS', 'Luciana USD', 'Bruno USD', 'Financiera', 'Efectivo en mano']
 
 function formatFee(fee: number | null, currency: FeeCurrency | null) {
   if (fee === null || fee === undefined) return '—'
