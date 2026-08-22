@@ -49,6 +49,7 @@ export interface ClientBillingHistoryEntry {
   month: string
   amount: number | null
   currency: FeeCurrency | null
+  payment_account: string | null
   updated_at: string
 }
 

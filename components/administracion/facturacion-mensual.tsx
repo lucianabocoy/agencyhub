@@ -4,10 +4,13 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { type ClientBillingHistoryEntry, type FeeCurrency } from '@/types/index'
 
+const PAYMENT_ACCOUNT_SUGGESTIONS = ['Luciana ARS', 'Luciana USD', 'Bruno USD', 'Financiera', 'Efectivo en mano']
+
 interface ClientOption {
   id: string
   name: string
   defaultCurrency: FeeCurrency | null
+  defaultPaymentAccount: string | null
 }
 
 interface Props {
@@ -117,6 +120,7 @@ function MonthlyRow({
 }) {
   const [amount, setAmount] = useState(entry?.amount?.toString() ?? '')
   const [currency, setCurrency] = useState<FeeCurrency>(entry?.currency ?? client.defaultCurrency ?? 'ARS')
+  const [paymentAccount, setPaymentAccount] = useState(entry?.payment_account ?? client.defaultPaymentAccount ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -134,6 +138,7 @@ function MonthlyRow({
         month,
         amount: amount === '' ? null : Number(amount),
         currency,
+        payment_account: paymentAccount || null,
       }),
     })
 
@@ -151,6 +156,7 @@ function MonthlyRow({
       month,
       amount: amount === '' ? null : Number(amount),
       currency,
+      payment_account: paymentAccount || null,
       updated_at: new Date().toISOString(),
     })
   }
@@ -171,6 +177,17 @@ function MonthlyRow({
         <option value="ARS">ARS</option>
         <option value="USD">USD</option>
       </select>
+      <input
+        type="text"
+        list="payment-account-suggestions-mensual"
+        value={paymentAccount}
+        onChange={(e) => setPaymentAccount(e.target.value)}
+        placeholder="Cuenta que recibió el pago"
+        className="w-40 px-2.5 py-1.5 text-sm rounded-lg"
+      />
+      <datalist id="payment-account-suggestions-mensual">
+        {PAYMENT_ACCOUNT_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
+      </datalist>
       <button
         onClick={handleSave}
         disabled={saving}

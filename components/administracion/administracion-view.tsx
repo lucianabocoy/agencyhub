@@ -100,7 +100,12 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
     () =>
       list
         .filter((r) => r.status === 'activo' && r.id !== AGENCIA_CLIENT_ID)
-        .map((r) => ({ id: r.id, name: r.name, defaultCurrency: r.billing?.fee_currency ?? null })),
+        .map((r) => ({
+          id: r.id,
+          name: r.name,
+          defaultCurrency: r.billing?.fee_currency ?? null,
+          defaultPaymentAccount: r.billing?.payment_account ?? null,
+        })),
     [list]
   )
 

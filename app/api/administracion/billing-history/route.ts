@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No tenés acceso a Administración' }, { status: 403 })
   }
 
-  const { client_id, month, amount, currency } = await request.json()
+  const { client_id, month, amount, currency, payment_account } = await request.json()
   if (!client_id || !month) {
     return NextResponse.json({ error: 'Falta client_id o month' }, { status: 400 })
   }
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     month,
     amount: amount === '' || amount === null || amount === undefined ? null : Number(amount),
     currency: currency || null,
+    payment_account: payment_account || null,
     updated_at: new Date().toISOString(),
   })
 
