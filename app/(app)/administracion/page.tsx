@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { type User, type Client, type ClientAssignment, type ClientBilling } from '@/types/index'
+import { type User, type Client, type ClientAssignment, type ClientBilling, type ClientBillingHistoryEntry } from '@/types/index'
 import { AdministracionView, type ClientRow } from '@/components/administracion/administracion-view'
 
 export default async function AdministracionPage() {
@@ -26,10 +26,14 @@ export default async function AdministracionPage() {
     client_assignments: (ClientAssignment & { users: Pick<User, 'id' | 'name' | 'color'> })[]
   })[]
 
-  // Datos de facturación/fiscales: tabla separada, solo vía service role.
+  // Datos de facturación/fiscales: tablas separadas, solo vía service role.
   const admin = await createAdminClient()
-  const { data: billingData } = await admin.from('client_billing').select('*')
+  const [{ data: billingData }, { data: historyData }] = await Promise.all([
+    admin.from('client_billing').select('*'),
+    admin.from('client_billing_history').select('*').order('month'),
+  ])
   const billingByClient = new Map(((billingData ?? []) as ClientBilling[]).map((b) => [b.client_id, b]))
+  const history = (historyData ?? []) as ClientBillingHistoryEntry[]
 
   const rows: ClientRow[] = clients.map((c) => ({
     id: c.id,
@@ -39,5 +43,5 @@ export default async function AdministracionPage() {
     billing: billingByClient.get(c.id) ?? null,
   }))
 
-  return <AdministracionView rows={rows} />
+  return <AdministracionView rows={rows} history={history} />
 }

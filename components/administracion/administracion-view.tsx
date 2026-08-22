@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { Pencil, X, FileText } from 'lucide-react'
-import { type ClientBilling, type ClientStatus, type FeeCurrency, type User } from '@/types/index'
+import { type ClientBilling, type ClientBillingHistoryEntry, type ClientStatus, type FeeCurrency, type User } from '@/types/index'
+import { FacturacionMensual } from './facturacion-mensual'
 
 export interface ClientRow {
   id: string
@@ -25,8 +26,9 @@ function formatFee(fee: number | null, currency: FeeCurrency | null) {
   return `${currency === 'USD' ? 'US$' : '$'} ${formatted}`
 }
 
-export function AdministracionView({ rows }: { rows: ClientRow[] }) {
+export function AdministracionView({ rows, history }: { rows: ClientRow[]; history: ClientBillingHistoryEntry[] }) {
   const [list, setList] = useState(rows)
+  const [billingHistory, setBillingHistory] = useState(history)
   const [statusFilter, setStatusFilter] = useState<'todos' | ClientStatus>('activo')
   const [editing, setEditing] = useState<ClientRow | null>(null)
 
@@ -59,10 +61,46 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
     return Array.from(map.entries())
   }, [list])
 
+  const ltvByClient = useMemo(() => {
+    const map = new Map<string, Record<string, number>>()
+    for (const h of billingHistory) {
+      if (!h.amount || !h.currency) continue
+      const byCurrency = map.get(h.client_id) ?? {}
+      byCurrency[h.currency] = (byCurrency[h.currency] ?? 0) + h.amount
+      map.set(h.client_id, byCurrency)
+    }
+    return map
+  }, [billingHistory])
+
+  function formatLTV(clientId: string) {
+    const byCurrency = ltvByClient.get(clientId)
+    if (!byCurrency) return '—'
+    const parts = Object.entries(byCurrency).map(([cur, amt]) => formatFee(amt, cur as FeeCurrency))
+    return parts.length ? parts.join(' · ') : '—'
+  }
+
   function handleSaved(clientId: string, billing: ClientBilling) {
     setList((prev) => prev.map((r) => (r.id === clientId ? { ...r, billing } : r)))
     setEditing(null)
   }
+
+  function handleHistorySaved(entry: ClientBillingHistoryEntry) {
+    setBillingHistory((prev) => {
+      const idx = prev.findIndex((h) => h.client_id === entry.client_id && h.month === entry.month)
+      if (idx === -1) return [...prev, entry]
+      const next = [...prev]
+      next[idx] = entry
+      return next
+    })
+  }
+
+  const monthlyClients = useMemo(
+    () =>
+      list
+        .filter((r) => r.status === 'activo' && r.id !== AGENCIA_CLIENT_ID)
+        .map((r) => ({ id: r.id, name: r.name, defaultCurrency: r.billing?.fee_currency ?? null })),
+    [list]
+  )
 
   return (
     <div className="p-6 space-y-5 max-w-6xl">
@@ -122,6 +160,7 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
               <th className="px-4 py-3 font-medium">Cliente</th>
               <th className="px-4 py-3 font-medium">Responsable</th>
               <th className="px-4 py-3 font-medium">Honorarios</th>
+              <th className="px-4 py-3 font-medium">LTV</th>
               <th className="px-4 py-3 font-medium">Actualizado</th>
               <th className="px-4 py-3 font-medium">Cuenta de pago</th>
               <th className="px-4 py-3 font-medium">Factura</th>
@@ -148,6 +187,7 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3 text-text whitespace-nowrap">{formatFee(r.billing?.fee ?? null, r.billing?.fee_currency ?? null)}</td>
+                <td className="px-4 py-3 text-text whitespace-nowrap">{formatLTV(r.id)}</td>
                 <td className="px-4 py-3 text-muted text-xs whitespace-nowrap">{r.billing?.fee_updated_at ?? '—'}</td>
                 <td className="px-4 py-3 text-text whitespace-nowrap">{r.billing?.payment_account || '—'}</td>
                 <td className="px-4 py-3">
@@ -171,6 +211,8 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
           </tbody>
         </table>
       </div>
+
+      <FacturacionMensual clients={monthlyClients} history={billingHistory} onSaved={handleHistorySaved} />
 
       {editing && (
         <EditBillingModal row={editing} onClose={() => setEditing(null)} onSaved={(b) => handleSaved(editing.id, b)} />

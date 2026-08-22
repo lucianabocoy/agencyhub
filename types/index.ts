@@ -44,6 +44,14 @@ export interface ClientBilling {
   updated_at: string
 }
 
+export interface ClientBillingHistoryEntry {
+  client_id: string
+  month: string
+  amount: number | null
+  currency: FeeCurrency | null
+  updated_at: string
+}
+
 export interface Client {
   id: string
   name: string
