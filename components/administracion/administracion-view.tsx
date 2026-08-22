@@ -12,6 +12,8 @@ export interface ClientRow {
   billing: ClientBilling | null
 }
 
+const AGENCIA_CLIENT_ID = '1881f6c4-c635-44a6-8032-a4930ced612c'
+
 const STATUS_LABEL: Record<ClientStatus, string> = { activo: 'Activo', pausado: 'Pausado', baja: 'Baja' }
 const STATUS_DOT: Record<ClientStatus, string> = { activo: 'bg-success', pausado: 'bg-warning', baja: 'bg-danger' }
 
@@ -29,6 +31,11 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
   const [editing, setEditing] = useState<ClientRow | null>(null)
 
   const filtered = statusFilter === 'todos' ? list : list.filter((r) => r.status === statusFilter)
+
+  const activeClientCount = useMemo(
+    () => list.filter((r) => r.status === 'activo' && r.id !== AGENCIA_CLIENT_ID).length,
+    [list]
+  )
 
   const totals = useMemo(() => {
     const byCurrency: Record<string, number> = {}
@@ -66,6 +73,10 @@ export function AdministracionView({ rows }: { rows: ClientRow[] }) {
 
       {/* Resumen: cuánto se está facturando */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <p className="text-xs text-muted mb-1">Clientes activos</p>
+          <p className="text-xl font-bold text-text">{activeClientCount}</p>
+        </div>
         {['ARS', 'USD'].map((cur) => (
           <div key={cur} className="bg-surface border border-border rounded-xl p-4">
             <p className="text-xs text-muted mb-1">Facturando en {cur} (clientes activos)</p>
