@@ -50,18 +50,19 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
     return byCurrency
   }, [billingHistory, month])
 
+  // Desglose por cuenta de cobro del mes seleccionado (lo cargado en "Facturación por mes").
   const byAccount = useMemo(() => {
     const map = new Map<string, { total: number; currency: string; count: number }>()
-    for (const r of list) {
-      if (r.status !== 'activo' || !r.billing?.fee || !r.billing.payment_account) continue
-      const key = r.billing.payment_account
-      const prev = map.get(key) ?? { total: 0, currency: r.billing.fee_currency ?? '', count: 0 }
-      prev.total += r.billing.fee
+    for (const h of billingHistory) {
+      if (h.month !== month || !h.amount || !h.payment_account) continue
+      const key = h.payment_account
+      const prev = map.get(key) ?? { total: 0, currency: h.currency ?? '', count: 0 }
+      prev.total += h.amount
       prev.count += 1
       map.set(key, prev)
     }
     return Array.from(map.entries())
-  }, [list])
+  }, [billingHistory, month])
 
   const ltvByClient = useMemo(() => {
     const map = new Map<string, Record<string, number>>()
@@ -132,12 +133,12 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
         </div>
       </div>
 
-      {/* Desglose por cuenta de cobro */}
+      {/* Desglose por cuenta de cobro del mes seleccionado */}
       {byAccount.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {byAccount.map(([account, v]) => (
             <div key={account} className="bg-surface border border-border rounded-xl p-3">
-              <p className="text-xs text-muted mb-1">{account} · {v.count} {v.count === 1 ? 'cuenta' : 'cuentas'}</p>
+              <p className="text-xs text-muted mb-1">{account} · {v.count} {v.count === 1 ? 'cliente' : 'clientes'}</p>
               <p className="text-lg font-bold text-text">{formatFee(v.total, v.currency as FeeCurrency)}</p>
             </div>
           ))}
