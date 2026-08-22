@@ -28,6 +28,20 @@ export interface User {
   avatar_url: string | null
   color: string | null
   created_at: string
+  can_view_finance?: boolean
+}
+
+export type FeeCurrency = 'ARS' | 'USD'
+
+export interface ClientBilling {
+  client_id: string
+  fee: number | null
+  fee_currency: FeeCurrency | null
+  fee_updated_at: string | null
+  payment_account: string | null
+  needs_invoice: boolean
+  fiscal_data: string | null
+  updated_at: string
 }
 
 export interface Client {

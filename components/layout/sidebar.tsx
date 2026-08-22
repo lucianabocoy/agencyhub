@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { type UserRole } from '@/types/index'
 import {
   LayoutDashboard, Users, Clock, CheckSquare,
-  Ticket, Target, BarChart3, TrendingUp, FileText, LogOut, Bell, UserPlus,
+  Ticket, Target, BarChart3, TrendingUp, FileText, LogOut, Bell, UserPlus, Wallet,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -17,6 +17,7 @@ interface NavItem {
   href: string
   icon: React.ElementType
   roles: UserRole[]
+  financeOnly?: boolean
 }
 
 const NAV: NavItem[] = [
@@ -30,6 +31,7 @@ const NAV: NavItem[] = [
   { label: 'Reportes', href: '/reportes', icon: FileText, roles: ['admin', 'trafficker'] },
   { label: 'Dashboard', href: '/dashboard', icon: BarChart3, roles: ['admin', 'trafficker'] },
   { label: 'Equipo', href: '/equipo', icon: UserPlus, roles: ['admin'] },
+  { label: 'Administración', href: '/administracion', icon: Wallet, roles: ['admin'], financeOnly: true },
 ]
 
 interface SidebarProps {
@@ -37,13 +39,14 @@ interface SidebarProps {
   userName: string
   color: string
   unreadCount?: number
+  canViewFinance?: boolean
 }
 
-export function Sidebar({ role, userName, color, unreadCount = 0 }: SidebarProps) {
+export function Sidebar({ role, userName, color, unreadCount = 0, canViewFinance = false }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-  const items = NAV.filter((i) => i.roles.includes(role))
+  const items = NAV.filter((i) => i.roles.includes(role) || (i.financeOnly && canViewFinance))
   const initials = userName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 
   async function logout() {

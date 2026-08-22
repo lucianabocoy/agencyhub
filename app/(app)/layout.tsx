@@ -78,6 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userName={typedProfile.name}
         color={typedProfile.color ?? '#818cf8'}
         unreadCount={count ?? 0}
+        canViewFinance={typedProfile.can_view_finance ?? false}
       />
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <TimerWidget userId={authUser.id} assignedClients={assignedClients} />
