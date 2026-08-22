@@ -60,7 +60,12 @@ export function EquipoView({ team }: Props) {
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text truncate">{u.name}</p>
+                  <p className="text-sm font-medium text-text truncate">
+                    {u.name}
+                    <span className="ml-1.5 text-xs font-normal text-muted">
+                      · {u.clients.length} {u.clients.length === 1 ? 'cuenta' : 'cuentas'}
+                    </span>
+                  </p>
                   <p className="text-xs text-muted truncate">{u.email}</p>
                 </div>
                 <span
@@ -175,7 +180,7 @@ function DetalleUsuariaModal({
 
               <div>
                 <p className="text-xs font-medium text-muted mb-2 flex items-center gap-1.5">
-                  <Briefcase size={13} /> Cuentas a cargo
+                  <Briefcase size={13} /> Cuentas a cargo ({member.clients.length})
                 </p>
                 {member.clients.length === 0 ? (
                   <p className="text-sm text-muted">Sin cuentas asignadas.</p>
@@ -246,7 +251,7 @@ function DetalleUsuariaModal({
 
               <div>
                 <p className="text-xs font-medium text-muted mb-2 flex items-center gap-1.5">
-                  <Briefcase size={13} /> Cuentas a cargo
+                  <Briefcase size={13} /> Cuentas a cargo ({member.clients.length})
                 </p>
                 {member.clients.length === 0 ? (
                   <p className="text-sm text-muted">Sin cuentas asignadas.</p>

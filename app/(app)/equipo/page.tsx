@@ -34,7 +34,7 @@ export default async function EquipoPage() {
   const team: TeamMember[] = users.map((u) => ({
     ...u,
     clients: assignments
-      .filter((a) => a.user_id === u.id && a.clients)
+      .filter((a) => a.user_id === u.id && a.clients && a.clients.status === 'activo')
       .map((a) => a.clients!),
     note: noteByUser.get(u.id) ?? null,
   }))
