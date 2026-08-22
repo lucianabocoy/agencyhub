@@ -14,20 +14,22 @@ interface Props {
   clients: ClientOption[]
   history: ClientBillingHistoryEntry[]
   onSaved: (entry: ClientBillingHistoryEntry) => void
+  month: string
+  onMonthChange: (month: string) => void
 }
 
-function currentMonthStr() {
+export function currentMonthStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-function shiftMonth(monthStr: string, delta: number) {
+export function shiftMonth(monthStr: string, delta: number) {
   const [y, m] = monthStr.split('-').map(Number)
   const d = new Date(y, m - 1 + delta, 1)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-function monthLabel(monthStr: string) {
+export function monthLabel(monthStr: string) {
   const [y, m] = monthStr.split('-').map(Number)
   const label = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   return label.charAt(0).toUpperCase() + label.slice(1)
@@ -38,9 +40,7 @@ function formatAmount(amount: number, currency: string) {
   return `${currency === 'USD' ? 'US$' : '$'} ${formatted}`
 }
 
-export function FacturacionMensual({ clients, history, onSaved }: Props) {
-  const [month, setMonth] = useState(currentMonthStr())
-
+export function FacturacionMensual({ clients, history, onSaved, month, onMonthChange }: Props) {
   const entryByClient = useMemo(() => {
     const map = new Map<string, ClientBillingHistoryEntry>()
     for (const h of history) {
@@ -67,11 +67,11 @@ export function FacturacionMensual({ clients, history, onSaved }: Props) {
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 bg-surface border border-border rounded-lg px-2 py-1.5">
-          <button onClick={() => setMonth((m) => shiftMonth(m, -1))} className="text-muted hover:text-text transition-colors">
+          <button onClick={() => onMonthChange(shiftMonth(month, -1))} className="text-muted hover:text-text transition-colors">
             <ChevronLeft size={16} />
           </button>
           <span className="text-sm font-medium text-text w-36 text-center capitalize">{monthLabel(month)}</span>
-          <button onClick={() => setMonth((m) => shiftMonth(m, 1))} className="text-muted hover:text-text transition-colors">
+          <button onClick={() => onMonthChange(shiftMonth(month, 1))} className="text-muted hover:text-text transition-colors">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -119,10 +119,12 @@ function MonthlyRow({
   const [currency, setCurrency] = useState<FeeCurrency>(entry?.currency ?? client.defaultCurrency ?? 'ARS')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSave() {
     setSaving(true)
     setSaved(false)
+    setError(null)
 
     const res = await fetch('/api/administracion/billing-history', {
       method: 'POST',
@@ -136,7 +138,11 @@ function MonthlyRow({
     })
 
     setSaving(false)
-    if (!res.ok) return
+    if (!res.ok) {
+      const json = await res.json().catch(() => null)
+      setError(json?.error ?? 'No se pudo guardar')
+      return
+    }
 
     setSaved(true)
     setTimeout(() => setSaved(false), 1500)
@@ -152,6 +158,7 @@ function MonthlyRow({
   return (
     <div className="flex items-center gap-3 px-4 py-2.5">
       <p className="flex-1 min-w-0 text-sm text-text truncate">{client.name}</p>
+      {error && <p className="text-danger text-xs flex-shrink-0">{error}</p>}
       <input
         type="number"
         step="0.01"

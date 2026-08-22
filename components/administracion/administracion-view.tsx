@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Pencil, X, FileText } from 'lucide-react'
 import { type ClientBilling, type ClientBillingHistoryEntry, type ClientStatus, type FeeCurrency, type User } from '@/types/index'
-import { FacturacionMensual } from './facturacion-mensual'
+import { FacturacionMensual, currentMonthStr, monthLabel } from './facturacion-mensual'
 
 export interface ClientRow {
   id: string
@@ -31,6 +31,7 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
   const [billingHistory, setBillingHistory] = useState(history)
   const [statusFilter, setStatusFilter] = useState<'todos' | ClientStatus>('activo')
   const [editing, setEditing] = useState<ClientRow | null>(null)
+  const [month, setMonth] = useState(currentMonthStr())
 
   const filtered = statusFilter === 'todos' ? list : list.filter((r) => r.status === statusFilter)
 
@@ -39,14 +40,15 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
     [list]
   )
 
+  // Totalidad facturada del mes seleccionado (lo cargado en "Facturación por mes"), no el honorario fijo.
   const totals = useMemo(() => {
     const byCurrency: Record<string, number> = {}
-    for (const r of list) {
-      if (r.status !== 'activo' || !r.billing?.fee || !r.billing.fee_currency) continue
-      byCurrency[r.billing.fee_currency] = (byCurrency[r.billing.fee_currency] ?? 0) + r.billing.fee
+    for (const h of billingHistory) {
+      if (h.month !== month || !h.amount || !h.currency) continue
+      byCurrency[h.currency] = (byCurrency[h.currency] ?? 0) + h.amount
     }
     return byCurrency
-  }, [list])
+  }, [billingHistory, month])
 
   const byAccount = useMemo(() => {
     const map = new Map<string, { total: number; currency: string; count: number }>()
@@ -116,11 +118,11 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
           <p className="text-2xl font-bold text-yesica">{activeClientCount}</p>
         </div>
         <div className="bg-yesica/10 border border-yesica/30 rounded-xl p-4">
-          <p className="text-xs text-yesica/70 mb-1">Facturando en USD (clientes activos)</p>
+          <p className="text-xs text-yesica/70 mb-1">Facturado en USD · {monthLabel(month)}</p>
           <p className="text-2xl font-bold text-yesica">{formatFee(totals.USD ?? 0, 'USD')}</p>
         </div>
         <div className="bg-yesica/10 border border-yesica/30 rounded-xl p-4">
-          <p className="text-xs text-yesica/70 mb-1">Facturando en ARS (clientes activos)</p>
+          <p className="text-xs text-yesica/70 mb-1">Facturado en ARS · {monthLabel(month)}</p>
           <p className="text-2xl font-bold text-yesica">{formatFee(totals.ARS ?? 0, 'ARS')}</p>
         </div>
       </div>
@@ -212,7 +214,13 @@ export function AdministracionView({ rows, history }: { rows: ClientRow[]; histo
         </table>
       </div>
 
-      <FacturacionMensual clients={monthlyClients} history={billingHistory} onSaved={handleHistorySaved} />
+      <FacturacionMensual
+        clients={monthlyClients}
+        history={billingHistory}
+        onSaved={handleHistorySaved}
+        month={month}
+        onMonthChange={setMonth}
+      />
 
       {editing && (
         <EditBillingModal row={editing} onClose={() => setEditing(null)} onSaved={(b) => handleSaved(editing.id, b)} />
